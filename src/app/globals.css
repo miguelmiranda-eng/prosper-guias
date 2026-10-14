@@ -1,26 +1,159 @@
 @import "tailwindcss";
 
+/* Identidad Prosper: azules medidos del logo (#2163A0 Manufacturing, #2A3E61 navy, #05A5F3 globo). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --line: #dde3ea;
+  --ink: #142033;
+  --muted: #5a6779;
+  --primary: #2163a0;
+  --primary-hover: #1b5288;
+  --primary-soft: #e3eef8;
+  --on-primary: #ffffff;
+  --accent: #05a5f3;
+  --nav: #1f2f4b;
+  --nav-ink: #c9d5e6;
+  --nav-active: #2a3e61;
+  --danger: #c0392b;
+  --danger-soft: #fbe9e7;
+  --warn: #9a5b00;
+  --warn-soft: #fff4dc;
+  --ok: #1b7f4b;
+  --ok-soft: #e3f4ea;
+  --focus: #05a5f3;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #0c121b;
+    --surface: #131b26;
+    --surface-2: #1a2431;
+    --line: #263345;
+    --ink: #e5ebf2;
+    --muted: #94a2b4;
+    --primary: #3b8fd9;
+    --primary-hover: #5aa3e3;
+    --primary-soft: #16324d;
+    --on-primary: #06111d;
+    --nav: #0a1018;
+    --nav-ink: #a9b6c8;
+    --nav-active: #1a2a42;
+    --danger: #ef6b5e;
+    --danger-soft: #3a1714;
+    --warn: #f0b04a;
+    --warn-soft: #3a2a0c;
+    --ok: #4cc785;
+    --ok-soft: #10301f;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0c121b;
+  --surface: #131b26;
+  --surface-2: #1a2431;
+  --line: #263345;
+  --ink: #e5ebf2;
+  --muted: #94a2b4;
+  --primary: #3b8fd9;
+  --primary-hover: #5aa3e3;
+  --primary-soft: #16324d;
+  --on-primary: #06111d;
+  --nav: #0a1018;
+  --nav-ink: #a9b6c8;
+  --nav-active: #1a2a42;
+  --danger: #ef6b5e;
+  --danger-soft: #3a1714;
+  --warn: #f0b04a;
+  --warn-soft: #3a2a0c;
+  --ok: #4cc785;
+  --ok-soft: #10301f;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-nav: var(--nav);
+  --color-nav-ink: var(--nav-ink);
+  --color-nav-active: var(--nav-active);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-blinker), var(--font-inter), system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-transparent bg-primary text-on-primary hover:bg-primary-hover;
+  }
+  .btn-danger {
+    @apply border-transparent bg-danger text-white hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent hover:bg-surface-2;
+  }
+  .btn-sm {
+    @apply px-2 py-1 text-xs;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-surface;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+/* Impresión: sólo el documento, sin navegación ni controles. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-step {
+    break-inside: avoid;
+  }
 }

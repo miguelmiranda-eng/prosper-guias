@@ -1,0 +1,75 @@
+:root {
+  --bg: #ffffff;
+  --ink: #142033;
+  --muted: #5a6779;
+  --line: #dde3ea;
+  --primary: #2163a0;
+  --danger: #c0392b;
+  --warn: #9a5b00;
+  --soft: #eef1f5;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131b26;
+    --ink: #e5ebf2;
+    --muted: #94a2b4;
+    --line: #263345;
+    --primary: #3b8fd9;
+    --danger: #ef6b5e;
+    --warn: #f0b04a;
+    --soft: #1a2431;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  width: 320px;
+  padding: 12px;
+  font: 13px/1.4 system-ui, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 15px; }
+.accent { color: #05a5f3; }
+.muted { color: var(--muted); }
+.small { font-size: 11px; }
+label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 3px; }
+input, select {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--primary); border-color: transparent; color: #fff; }
+button.danger { background: var(--danger); border-color: transparent; color: #fff; }
+button.link { background: none; border: none; color: var(--muted); font-weight: 400; padding: 4px; text-decoration: underline; }
+.row { display: flex; gap: 8px; }
+.row button { flex: 1; }
+.card { border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin-top: 8px; }
+.rec { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); animation: pulse 1.2s infinite; }
+.dot.paused { background: var(--warn); animation: none; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; text-align: center; }
+.stats b { display: block; font-size: 18px; }
+.error { color: var(--danger); font-size: 12px; margin: 10px 0 0; }
+.warn { color: var(--warn); font-size: 12px; }
+a { color: var(--primary); }
