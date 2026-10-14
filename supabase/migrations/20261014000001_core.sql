@@ -1,17 +1,17 @@
--- Prosper GuÃ­as Â· esquema central (fase 2)
--- Espacios de trabajo, membresÃ­as, guÃ­as, pasos, versiones, actividad y almacenamiento privado.
--- Todos los permisos se validan aquÃ­ (RLS + funciones), no en el frontend.
+-- Prosper Guías · esquema central (fase 2)
+-- Espacios de trabajo, membresías, guías, pasos, versiones, actividad y almacenamiento privado.
+-- Todos los permisos se validan aquí (RLS + funciones), no en el frontend.
 
 create extension if not exists pg_trgm;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ───────────────────────── Tipos ─────────────────────────
 create type public.workspace_role as enum ('owner', 'admin', 'editor', 'member', 'viewer');
 create type public.guide_status as enum ('draft', 'published', 'archived');
 create type public.guide_visibility as enum ('private', 'workspace');
 create type public.step_kind as enum ('action', 'manual');
 create type public.note_kind as enum ('tip', 'warning', 'info');
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Tablas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ───────────────────────── Tablas ─────────────────────────
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null default '' check (char_length(full_name) <= 120),
@@ -39,7 +39,7 @@ create table public.guides (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
   owner_id uuid not null references public.profiles (id),
-  title text not null default 'GuÃ­a sin tÃ­tulo' check (char_length(title) between 1 and 200),
+  title text not null default 'Guía sin título' check (char_length(title) between 1 and 200),
   description text not null default '' check (char_length(description) <= 2000),
   status public.guide_status not null default 'draft',
   visibility public.guide_visibility not null default 'workspace',
@@ -73,7 +73,7 @@ create table public.guide_steps (
   click_y real check (click_y between 0 and 1),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  -- Las capturas de un paso sÃ³lo pueden vivir en la carpeta de su propia guÃ­a.
+  -- Las capturas de un paso sólo pueden vivir en la carpeta de su propia guía.
   constraint guide_steps_path_in_guide check (
     screenshot_path is null or split_part(screenshot_path, '/', 1) = guide_id::text
   ),
@@ -104,8 +104,8 @@ create table public.activity_log (
 );
 create index activity_ws_created_idx on public.activity_log (workspace_id, created_at desc);
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Funciones de permiso â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
--- SECURITY DEFINER para que las polÃ­ticas no se llamen a sÃ­ mismas en recursiÃ³n.
+-- ─────────────────── Funciones de permiso ───────────────────
+-- SECURITY DEFINER para que las políticas no se llamen a sí mismas en recursión.
 
 create function public.ws_role(ws uuid)
 returns public.workspace_role
@@ -126,8 +126,8 @@ as $$
   )
 $$;
 
--- Leer: privada = sÃ³lo su autor; del espacio = todos los miembros.
--- En la papelera, las del espacio sÃ³lo las ven owner/admin (y el autor).
+-- Leer: privada = sólo su autor; del espacio = todos los miembros.
+-- En la papelera, las del espacio sólo las ven owner/admin (y el autor).
 create function public.can_read_guide(gid uuid)
 returns boolean
 language sql stable security definer set search_path = ''
@@ -142,7 +142,7 @@ as $$
   )
 $$;
 
--- Editar contenido: el autor (si no es lector) o editor+ en guÃ­as del espacio. Nunca en la papelera.
+-- Editar contenido: el autor (si no es lector) o editor+ en guías del espacio. Nunca en la papelera.
 create function public.can_edit_guide(gid uuid)
 returns boolean
 language sql stable security definer set search_path = ''
@@ -183,7 +183,7 @@ exception when others then
 end
 $$;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ───────────────────────── RLS ─────────────────────────
 alter table public.profiles enable row level security;
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;
@@ -203,7 +203,7 @@ create policy workspaces_update on public.workspaces for update to authenticated
   using (public.ws_role(id) in ('owner', 'admin'))
   with check (public.ws_role(id) in ('owner', 'admin'));
 
--- Altas, bajas y cambios de rol sÃ³lo por las funciones add/update/remove_member.
+-- Altas, bajas y cambios de rol sólo por las funciones add/update/remove_member.
 create policy members_select on public.workspace_members for select to authenticated
   using (public.ws_role(workspace_id) is not null);
 
@@ -238,27 +238,27 @@ create policy versions_insert on public.guide_versions for insert to authenticat
 create policy activity_select on public.activity_log for select to authenticated
   using (public.ws_role(workspace_id) is not null);
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Triggers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ───────────────────────── Triggers ─────────────────────────
 
 -- Separa "editar contenido" de "administrar": un editor no puede cambiar la visibilidad
--- ni mandar a la papelera la guÃ­a de otro aunque la polÃ­tica UPDATE lo deje pasar.
+-- ni mandar a la papelera la guía de otro aunque la política UPDATE lo deje pasar.
 create function public.guides_before_update()
 returns trigger
 language plpgsql security invoker set search_path = ''
 as $$
 begin
   if new.workspace_id <> old.workspace_id or new.owner_id <> old.owner_id then
-    raise exception 'No se puede mover ni reasignar la guÃ­a' using errcode = '42501';
+    raise exception 'No se puede mover ni reasignar la guía' using errcode = '42501';
   end if;
   if auth.uid() is not null then
     if (new.visibility, new.deleted_at) is distinct from (old.visibility, old.deleted_at)
        and not public.can_manage_guide(old.id) then
-      raise exception 'Sin permiso para administrar esta guÃ­a' using errcode = '42501';
+      raise exception 'Sin permiso para administrar esta guía' using errcode = '42501';
     end if;
     if (new.title, new.description, new.status, new.recording) is distinct from
        (old.title, old.description, old.status, old.recording)
        and not public.can_edit_guide(old.id) then
-      raise exception 'Sin permiso para editar esta guÃ­a' using errcode = '42501';
+      raise exception 'Sin permiso para editar esta guía' using errcode = '42501';
     end if;
   end if;
   if new.status = 'published' and old.status <> 'published' then
@@ -276,7 +276,7 @@ $$;
 create trigger guides_before_update before update on public.guides
   for each row execute function public.guides_before_update();
 
--- Cualquier cambio de pasos marca la guÃ­a como modificada.
+-- Cualquier cambio de pasos marca la guía como modificada.
 create function public.steps_touch_guide()
 returns trigger
 language plpgsql security definer set search_path = ''
@@ -295,7 +295,7 @@ create trigger steps_touch_guide before insert or update on public.guide_steps
 create trigger steps_touch_guide_del after delete on public.guide_steps
   for each row execute function public.steps_touch_guide();
 
--- BitÃ¡cora de actividad (sÃ³lo ids; el tÃ­tulo se resuelve con RLS al leer, asÃ­ no se filtran privadas).
+-- Bitácora de actividad (sólo ids; el título se resuelve con RLS al leer, así no se filtran privadas).
 create function public.guides_log_activity()
 returns trigger
 language plpgsql security definer set search_path = ''
@@ -316,7 +316,7 @@ begin
     insert into public.activity_log (workspace_id, actor_id, entity_type, entity_id, action, meta)
     values (
       old.workspace_id, auth.uid(), 'guide', old.id, 'deleted',
-      -- El título de una privada no se guarda: la bitácora la lee todo el espacio.
+      -- El t�tulo de una privada no se guarda: la bit�cora la lee todo el espacio.
       case when old.visibility = 'workspace' then jsonb_build_object('title', old.title) else '{}'::jsonb end
     );
     return old;
@@ -349,8 +349,8 @@ $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RPCs de pasos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
--- SECURITY INVOKER: RLS sigue mandando; el candado consultivo serializa el orden por guÃ­a.
+-- ───────────────────────── RPCs de pasos ─────────────────────────
+-- SECURITY INVOKER: RLS sigue mandando; el candado consultivo serializa el orden por guía.
 
 create function public.insert_step(
   p_guide uuid,
@@ -374,7 +374,7 @@ declare
   r public.guide_steps;
 begin
   if not public.can_edit_guide(p_guide) then
-    raise exception 'Sin permiso para editar esta guÃ­a' using errcode = '42501';
+    raise exception 'Sin permiso para editar esta guía' using errcode = '42501';
   end if;
   perform pg_advisory_xact_lock(hashtextextended(p_guide::text, 0));
   select coalesce(max(position), 0) into v_max from public.guide_steps where guide_id = p_guide;
@@ -432,7 +432,7 @@ begin
 end
 $$;
 
--- p_ids debe ser exactamente el conjunto de pasos de la guÃ­a, en el orden nuevo.
+-- p_ids debe ser exactamente el conjunto de pasos de la guía, en el orden nuevo.
 create function public.reorder_steps(p_guide uuid, p_ids uuid[])
 returns void
 language plpgsql security invoker set search_path = ''
@@ -441,7 +441,7 @@ declare
   v_count integer;
 begin
   if not public.can_edit_guide(p_guide) then
-    raise exception 'Sin permiso para editar esta guÃ­a' using errcode = '42501';
+    raise exception 'Sin permiso para editar esta guía' using errcode = '42501';
   end if;
   perform pg_advisory_xact_lock(hashtextextended(p_guide::text, 0));
   select count(*) into v_count from public.guide_steps where guide_id = p_guide;
@@ -451,7 +451,7 @@ begin
        select 1 from unnest(p_ids) x
        where not exists (select 1 from public.guide_steps s where s.id = x and s.guide_id = p_guide)
      ) then
-    raise exception 'La lista de pasos no coincide con la guÃ­a (Â¿alguien mÃ¡s la editÃ³?)' using errcode = '22023';
+    raise exception 'La lista de pasos no coincide con la guía (¿alguien más la editó?)' using errcode = '22023';
   end if;
   update public.guide_steps s set position = o.ord
   from unnest(p_ids) with ordinality as o(id, ord)
@@ -459,7 +459,7 @@ begin
 end
 $$;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Versiones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-- ───────────────────────── Versiones ─────────────────────────
 create function public.create_version(p_guide uuid, p_label text default '')
 returns public.guide_versions
 language plpgsql security invoker set search_path = ''
@@ -470,7 +470,7 @@ declare
   r public.guide_versions;
 begin
   if not public.can_edit_guide(p_guide) then
-    raise exception 'Sin permiso para editar esta guÃ­a' using errcode = '42501';
+    raise exception 'Sin permiso para editar esta guía' using errcode = '42501';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('v' || p_guide::text, 0));
   select * into g from public.guides where id = p_guide;
@@ -493,7 +493,7 @@ begin
 end
 $$;
 
--- Restaurar nunca destruye: primero guarda el estado actual como versiÃ³n nueva.
+-- Restaurar nunca destruye: primero guarda el estado actual como versión nueva.
 create function public.restore_version(p_version uuid)
 returns void
 language plpgsql security invoker set search_path = ''
@@ -503,9 +503,9 @@ declare
 begin
   select * into v from public.guide_versions where id = p_version;
   if v.id is null or not public.can_edit_guide(v.guide_id) then
-    raise exception 'VersiÃ³n no encontrada o sin permiso' using errcode = '42501';
+    raise exception 'Versión no encontrada o sin permiso' using errcode = '42501';
   end if;
-  perform public.create_version(v.guide_id, 'AutomÃ¡tica antes de restaurar v' || v.version_no);
+  perform public.create_version(v.guide_id, 'Automática antes de restaurar v' || v.version_no);
   perform pg_advisory_xact_lock(hashtextextended(v.guide_id::text, 0));
   delete from public.guide_steps where guide_id = v.guide_id;
   insert into public.guide_steps (
@@ -523,8 +523,8 @@ begin
 end
 $$;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Equipo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
--- Fase 2: se agrega a usuarios YA registrados. Invitaciones por correo con expiraciÃ³n = fase 6.
+-- ───────────────────────── Equipo ─────────────────────────
+-- Fase 2: se agrega a usuarios YA registrados. Invitaciones por correo con expiración = fase 6.
 create function public.add_member(p_ws uuid, p_email text, p_role public.workspace_role)
 returns void
 language plpgsql security definer set search_path = ''
@@ -533,17 +533,17 @@ declare
   v_user uuid;
 begin
   if public.ws_role(p_ws) not in ('owner', 'admin') then
-    raise exception 'SÃ³lo propietario o administrador pueden agregar miembros' using errcode = '42501';
+    raise exception 'Sólo propietario o administrador pueden agregar miembros' using errcode = '42501';
   end if;
   if p_role = 'owner' then
     raise exception 'No se puede agregar a alguien como propietario' using errcode = '22023';
   end if;
   if p_role = 'admin' and public.ws_role(p_ws) <> 'owner' then
-    raise exception 'SÃ³lo el propietario puede nombrar administradores' using errcode = '42501';
+    raise exception 'Sólo el propietario puede nombrar administradores' using errcode = '42501';
   end if;
   select id into v_user from public.profiles where lower(email) = lower(trim(p_email));
   if v_user is null then
-    raise exception 'No existe una cuenta con ese correo; pÃ­dele que se registre primero' using errcode = 'P0002';
+    raise exception 'No existe una cuenta con ese correo; pídele que se registre primero' using errcode = 'P0002';
   end if;
   insert into public.workspace_members (workspace_id, user_id, role) values (p_ws, v_user, p_role)
   on conflict (workspace_id, user_id) do nothing;
@@ -595,7 +595,7 @@ begin
   if v_theirs is null then
     raise exception 'Miembro no encontrado' using errcode = 'P0002';
   end if;
-  -- Cualquiera puede salirse; quitar a otros exige owner/admin y jerarquÃ­a.
+  -- Cualquiera puede salirse; quitar a otros exige owner/admin y jerarquía.
   if p_user <> auth.uid() then
     if v_mine is null or v_mine not in ('owner', 'admin') then
       raise exception 'Sin permiso' using errcode = '42501';
@@ -619,7 +619,7 @@ revoke execute on function public.handle_new_user() from public, anon, authentic
 revoke execute on function public.guides_log_activity() from public, anon, authenticated;
 revoke execute on function public.steps_touch_guide() from public, anon, authenticated;
 revoke execute on function public.guides_before_update() from public, anon, authenticated;
--- Las RPC sÃ³lo para sesiones autenticadas.
+-- Las RPC sólo para sesiones autenticadas.
 revoke execute on function public.insert_step, public.delete_step, public.duplicate_step,
   public.reorder_steps, public.create_version, public.restore_version,
   public.add_member, public.update_member_role, public.remove_member from public, anon;
@@ -627,8 +627,8 @@ grant execute on function public.insert_step, public.delete_step, public.duplica
   public.reorder_steps, public.create_version, public.restore_version,
   public.add_member, public.update_member_role, public.remove_member to authenticated;
 
--- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Almacenamiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
--- Bucket privado: <guide_id>/<archivo>. Sin URL pÃºblica; sÃ³lo URLs firmadas.
+-- ───────────────────────── Almacenamiento ─────────────────────────
+-- Bucket privado: <guide_id>/<archivo>. Sin URL pública; sólo URLs firmadas.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('guide-media', 'guide-media', false, 5242880, array['image/png', 'image/jpeg'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,

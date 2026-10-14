@@ -116,6 +116,15 @@ end $$;
 reset role;
 select set_config('request.jwt.claims', '{"sub":"e0000000-0000-4000-8000-00000000000e","role":"authenticated"}', true);
 set local role authenticated;
+do $$
+declare v_id uuid;
+begin
+  -- Lo que hace la app: crear y pedir la fila de vuelta (INSERT ... RETURNING).
+  insert into public.guides (workspace_id, owner_id, title)
+  values ((select v from t where k = 'ws'), 'e0000000-0000-4000-8000-00000000000e', 'Con returning')
+  returning id into v_id;
+  if v_id is null then raise exception 'FALLA: INSERT ... RETURNING no devolvió la guía'; end if;
+end $$;
 do $$ begin
   update public.guide_steps set instruction = 'hack' where guide_id = '10000000-0000-4000-8000-000000000001';
   if found then raise exception 'FALLA: colaborador editó una guía ajena'; end if;
