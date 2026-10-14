@@ -44,7 +44,9 @@ async function render() {
   return renderIdle(s);
 }
 
-function renderSetup(prefill = "") {
+const DEFAULT_APP_URL = "https://prosper-guias.vercel.app";
+
+function renderSetup(prefill = DEFAULT_APP_URL) {
   app.innerHTML = `
     <p>Conecta la extensión con tu Prosper Guías.</p>
     <label for="url">Dirección de la app</label>
@@ -100,7 +102,8 @@ function renderIdle(s) {
     ${
       options
         ? `<label for="ws">Guardar en el espacio</label><select id="ws">${options}</select>
-           <button id="start" class="primary">● Iniciar grabación</button>`
+           <button id="start" class="primary big">● Iniciar grabación</button>
+           <p class="muted small">Al iniciar, esta ventana se cierra. Controla la grabación con la barra que aparece abajo en la página.</p>`
         : `<p class="warn">Tu rol no permite crear guías en ningún espacio (eres lector).</p>`
     }
     ${pending ? `<p class="warn">${pending} paso(s) de una grabación anterior siguen pendientes de subir.</p><button id="retry">Reintentar subida</button>` : ""}
@@ -113,7 +116,10 @@ function renderIdle(s) {
   const start = document.getElementById("start");
   if (start) {
     document.getElementById("ws").onchange = (e) => chrome.storage.local.set({ workspaceId: e.target.value });
-    start.onclick = busy(start, () => send("pg:start"));
+    start.onclick = busy(start, async () => {
+      await send("pg:start");
+      window.close(); // como Scribe: se quita de en medio y la barra flotante toma el control
+    });
   }
   const retry = document.getElementById("retry");
   if (retry) retry.onclick = busy(retry, () => send("pg:retry"));

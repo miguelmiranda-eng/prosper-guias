@@ -58,6 +58,7 @@ button {
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.primary { background: var(--primary); border-color: transparent; color: #fff; }
+button.big { padding: 14px 10px; font-size: 15px; margin-top: 12px; }
 button.danger { background: var(--danger); border-color: transparent; color: #fff; }
 button.link { background: none; border: none; color: var(--muted); font-weight: 400; padding: 4px; text-decoration: underline; }
 .row { display: flex; gap: 8px; }

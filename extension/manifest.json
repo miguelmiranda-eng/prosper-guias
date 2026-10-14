@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "Prosper Guías — Grabador",
   "short_name": "Prosper Guías",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Graba procesos en el navegador (clics y campos, con captura de pantalla) y los convierte en guías paso a paso en Prosper Guías.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "unlimitedStorage", "tabs", "alarms"],
+  "permissions": ["storage", "unlimitedStorage", "tabs", "alarms", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {

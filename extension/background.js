@@ -97,7 +97,9 @@ async function ingest(tab, ev) {
     path: null,
   };
   const host = hostOf(tab.url);
+  let stepNo = 0;
   await mutate(["queue", "rec"], (s) => {
+    stepNo = (s.rec?.captured || 0) + 1;
     if (!s.rec || s.rec.guideId !== item.guideId) return null;
     return {
       queue: [...(s.queue || []), item],
@@ -111,6 +113,22 @@ async function ingest(tab, ev) {
     };
   });
   void kick();
+  return stepNo;
+}
+
+/**
+ * Las páginas que ya estaban abiertas antes de instalar o recargar la extensión no tienen
+ * el script de grabación: se lo inyectamos al empezar, para que los clics cuenten desde ya.
+ */
+async function injectIntoOpenTabs() {
+  const tabs = await chrome.tabs.query({ url: ["http://*/*", "https://*/*"] });
+  await Promise.all(
+    tabs.map((t) =>
+      chrome.scripting
+        .executeScript({ target: { tabId: t.id }, files: ["content.js"] })
+        .catch((e) => console.warn("[pg] no se pudo preparar la pestaña", t.url, e?.message)),
+    ),
+  );
 }
 
 // ───────── Cola de subida ─────────
@@ -229,6 +247,7 @@ async function start(windowId) {
     rec: { guideId: guide.id, status: "recording", startedAt: Date.now(), captured: 0, saved: 0, dropped: 0, noImage: 0, hosts: [], lastError: null },
   });
   await updateBadge();
+  await injectIntoOpenTabs();
   const [tab] = await chrome.tabs.query({ active: true, windowId });
   if (tab && /^https?:/.test(tab.url || "")) {
     await ingest(tab, { action: "navigate", instruction: `Abre «${tab.title || hostOf(tab.url)}»` });
@@ -275,31 +294,37 @@ async function updateBadge() {
 
 // ───────── Mensajes ─────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  // Las páginas sólo pueden mandar eventos de paso; el control lo tiene el popup (página de la extensión).
-  const fromExtensionPage = sender.id === chrome.runtime.id && !sender.tab;
+  // Sólo nuestro popup y nuestro script de página pueden hablar con el service worker (no hay
+  // externally_connectable: el JavaScript de las páginas no puede mandarnos mensajes).
+  // Iniciar y capturar a mano: sólo desde el popup. Pausar/terminar: también desde la barra flotante.
+  const ours = sender.id === chrome.runtime.id;
+  const fromExtensionPage = ours && !sender.tab;
+  const fromOurBar = ours && Boolean(sender.tab);
   const handle = async () => {
     switch (msg?.type) {
-      case "pg:event":
-        if (sender.tab && sender.id === chrome.runtime.id) await ingest(sender.tab, msg.event || {});
-        return { ok: true };
+      case "pg:event": {
+        if (!fromOurBar) break;
+        const step = await ingest(sender.tab, msg.event || {});
+        return { ok: true, step };
+      }
       case "pg:start":
         if (!fromExtensionPage) break;
         await start(msg.windowId);
         return { ok: true };
       case "pg:pause":
-        if (!fromExtensionPage) break;
+        if (!fromExtensionPage && !fromOurBar) break;
         await setStatus("paused");
         return { ok: true };
       case "pg:resume":
-        if (!fromExtensionPage) break;
+        if (!fromExtensionPage && !fromOurBar) break;
         await setStatus("recording");
         return { ok: true };
       case "pg:stop":
-        if (!fromExtensionPage) break;
+        if (!fromExtensionPage && !fromOurBar) break;
         await stop();
         return { ok: true };
       case "pg:discard":
-        if (!fromExtensionPage) break;
+        if (!fromExtensionPage && !fromOurBar) break;
         await discard();
         return { ok: true };
       case "pg:retry":
