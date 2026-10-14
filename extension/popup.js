@@ -188,4 +188,5 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && (changes.rec || changes.queue || changes.session || changes.cfg)) render();
 });
 
+document.getElementById("version").textContent = `v${chrome.runtime.getManifest().version}`;
 render();

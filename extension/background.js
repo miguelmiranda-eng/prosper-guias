@@ -97,15 +97,22 @@ async function ingest(tab, ev) {
     path: null,
   };
   const host = hostOf(tab.url);
+  const preview = image ? await thumbnail(image).catch(() => null) : null;
   let stepNo = 0;
-  await mutate(["queue", "rec"], (s) => {
-    stepNo = (s.rec?.captured || 0) + 1;
+  await mutate(["queue", "rec", "recSteps"], (s) => {
     if (!s.rec || s.rec.guideId !== item.guideId) return null;
+    stepNo = (s.rec.captured || 0) + 1;
+    // Lo que muestra la tarjeta flotante: los últimos pasos con miniatura (nunca la imagen completa).
+    const recent = [
+      { n: stepNo, instruction: item.instruction, thumb: preview, x: item.clickX, y: item.clickY, sensitive: Boolean(ev.sensitive) },
+      ...(s.recSteps || []),
+    ].slice(0, 8);
     return {
       queue: [...(s.queue || []), item],
+      recSteps: recent,
       rec: {
         ...s.rec,
-        captured: (s.rec.captured || 0) + 1,
+        captured: stepNo,
         noImage: (s.rec.noImage || 0) + (image ? 0 : 1),
         hosts: host && !s.rec.hosts.includes(host) ? [...s.rec.hosts, host] : s.rec.hosts,
         lastCaptureError: captureError,
@@ -114,6 +121,20 @@ async function ingest(tab, ev) {
   });
   void kick();
   return stepNo;
+}
+
+/** Miniatura JPEG de ~240 px para la tarjeta flotante. */
+async function thumbnail(dataUrl) {
+  const bmp = await createImageBitmap(await (await fetch(dataUrl)).blob());
+  const w = 240;
+  const h = Math.max(1, Math.round((bmp.height * w) / bmp.width));
+  const canvas = new OffscreenCanvas(w, h);
+  canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.6 });
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:image/jpeg;base64,${btoa(bin)}`;
 }
 
 /**
@@ -215,7 +236,7 @@ async function finalize(rec) {
       body: { recording: false },
       prefer: "return=minimal",
     });
-    await chrome.storage.local.set({ rec: null, lastRecording: { guideId: rec.guideId, saved: rec.saved || 0, dropped: rec.dropped || 0, noImage: rec.noImage || 0, at: Date.now() } });
+    await chrome.storage.local.set({ rec: null, recSteps: [], lastRecording: { guideId: rec.guideId, saved: rec.saved || 0, dropped: rec.dropped || 0, noImage: rec.noImage || 0, at: Date.now() } });
     await chrome.tabs.create({ url: `${cfg.appUrl}/guides/${rec.guideId}` });
   } catch (e) {
     console.error("[pg] finalizar", e?.status, e?.message);
@@ -244,6 +265,7 @@ async function start(windowId) {
     prefer: "return=representation",
   });
   await chrome.storage.local.set({
+    recSteps: [],
     rec: { guideId: guide.id, status: "recording", startedAt: Date.now(), captured: 0, saved: 0, dropped: 0, noImage: 0, hosts: [], lastError: null },
   });
   await updateBadge();
@@ -280,7 +302,7 @@ async function discard() {
   } catch (e) {
     console.error("[pg] descartar", e?.message);
   }
-  await chrome.storage.local.set({ rec: null });
+  await chrome.storage.local.set({ rec: null, recSteps: [] });
   await updateBadge();
 }
 
