@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/"];
 
 // Refresca la sesión de Supabase en cada navegación y saca a /login a quien no la tenga.
 // Es sólo comodidad de UX: los permisos reales viven en la base (RLS).

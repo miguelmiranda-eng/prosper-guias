@@ -34,6 +34,11 @@ export function AuthForm({ mode, next, initialError }: { mode: "login" | "signup
           required
         />
         {mode === "signup" && <p className="mt-1 text-xs text-muted">Mínimo 10 caracteres.</p>}
+        {mode === "login" && (
+          <p className="mt-1 text-right text-xs">
+            <Link className="text-primary hover:underline" href="/forgot-password">¿Olvidaste tu contraseña?</Link>
+          </p>
+        )}
       </div>
       {next && <input type="hidden" name="next" value={next} />}
 

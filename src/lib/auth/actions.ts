@@ -63,6 +63,50 @@ export async function signup(_: AuthState, form: FormData): Promise<AuthState> {
   return { info: "Te enviamos un correo para confirmar tu cuenta. Ábrelo y después inicia sesión." };
 }
 
+/**
+ * Manda el correo de recuperación. Siempre responde lo mismo, exista o no la cuenta,
+ * para no revelar qué correos están registrados.
+ */
+export async function requestPasswordReset(_: AuthState, form: FormData): Promise<AuthState> {
+  const parsed = z.email("Correo inválido.").safeParse(form.get("email"));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const origin = (await headers()).get("origin") ?? "";
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  });
+  if (error) {
+    console.error("[auth] reset", error.code, error.message);
+    if (error.code === "over_email_send_rate_limit") {
+      return { error: "Se alcanzó el límite de correos. Espera unos minutos e intenta de nuevo." };
+    }
+  }
+  return { info: "Si ese correo tiene cuenta, te llegará un enlace para elegir una contraseña nueva. Ábrelo en este mismo navegador." };
+}
+
+const newPasswordSchema = z
+  .object({
+    password: z.string().min(10, "La contraseña debe tener al menos 10 caracteres.").max(72),
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, { message: "Las contraseñas no coinciden.", path: ["confirm"] });
+
+export async function updatePassword(_: AuthState, form: FormData): Promise<AuthState> {
+  const parsed = newPasswordSchema.safeParse({ password: form.get("password"), confirm: form.get("confirm") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims?.sub) return { error: "El enlace expiró. Pide uno nuevo desde «¿Olvidaste tu contraseña?»." };
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    console.error("[auth] updatePassword", error.code, error.message);
+    if (error.code === "same_password") return { error: "Usa una contraseña distinta a la anterior." };
+    if (error.code === "weak_password") return { error: "Contraseña demasiado débil; usa una más larga." };
+    return { error: "No se pudo cambiar la contraseña." };
+  }
+  redirect("/");
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();

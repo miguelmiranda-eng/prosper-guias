@@ -68,7 +68,9 @@ function renderLogin(s) {
       <input id="password" type="password" autocomplete="current-password" required />
       <button id="go" class="primary" type="submit">Iniciar sesión</button>
     </form>
+    <button id="forgot" class="link">¿Olvidaste tu contraseña?</button>
     <button id="reset" class="link">Cambiar dirección de la app</button>`;
+  document.getElementById("forgot").onclick = () => chrome.tabs.create({ url: `${s.cfg.appUrl}/forgot-password` });
   const btn = document.getElementById("go");
   document.getElementById("login").onsubmit = (e) => {
     e.preventDefault();
